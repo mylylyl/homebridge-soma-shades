@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "ExampleHomebridgePlugin",
+  "pluginAlias": "SOMAShades",
   "pluginType": "platform",
   "singular": true,
   "schema": {
