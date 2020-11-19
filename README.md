@@ -10,11 +10,13 @@
 
 This is a homebridge plugin for SOMA Smart Shades.
 
-Currently supported:
+Currently supports:
 * [Smart Shades 2](https://www.somasmarthome.com/)
 * [Smart Shades (Not Tested)](https://www.somasmarthome.com/)
 
+
 ## Installation
+
 ### Install bluetooth libraries
 ##### Ubuntu, Debian, Raspbian
 ```sh
@@ -30,8 +32,7 @@ You can also install it on the homebridge plugins page.
 
 ## Configuration
 You can configure it using [homebridge-config-ui-x](https://www.npmjs.com/package/homebridge-config-ui-x)
-
-or add it manually
+or add below to ```config.json``` manually
 ```json
 {
     "devices": [
