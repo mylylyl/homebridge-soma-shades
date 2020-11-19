@@ -82,6 +82,7 @@ export class SOMADevice {
 			this.peripheral.once('disconnect', () => {
 				this.log.debug('peripheral disconnected');
 				this.connected = false;
+				this.initialized = false;
 				this.peripheral.removeAllListeners();
 			});
 
@@ -197,7 +198,7 @@ export class SOMADevice {
 
 	async getCurrentPosition(): Promise<number> {
 		if (!this.connected) {
-			this.log.error('[getCurrentPosition] Peripheral not connected');
+			this.log.info('[getCurrentPosition] Peripheral not connected');
 			return this.connect().then(() => this.getCurrentPosition()).catch((error) => {
 				this.log.error('[getCurrentPosition] failed to get position after trying to reconnect: %s', error);
 				return 0;
@@ -235,7 +236,7 @@ export class SOMADevice {
 
 	async getTargetPosition(): Promise<number> {
 		if (!this.connected) {
-			this.log.error('[getTargetPosition] Peripheral not connected');
+			this.log.info('[getTargetPosition] Peripheral not connected');
 			return this.connect().then(() => this.getTargetPosition()).catch((error) => {
 				this.log.error('[getTargetPosition] failed to get position after trying to reconnect: %s', error);
 				return 0;
@@ -273,7 +274,7 @@ export class SOMADevice {
 
 	async setTargetPosition(position: number): Promise<void> {
 		if (!this.connected) {
-			this.log.error('[setTargetPosition] Peripheral not connected');
+			this.log.info('[setTargetPosition] Peripheral not connected');
 			return this.connect().then(() => this.setTargetPosition(position)).catch((error) => {
 				this.log.error('[setTargetPosition] failed to set position after trying to reconnect: %s', error);
 			});
@@ -299,7 +300,7 @@ export class SOMADevice {
 
 	async setMotorStop(): Promise<void> {
 		if (!this.connected) {
-			this.log.error('[setMotorStop] Peripheral not connected');
+			this.log.info('[setMotorStop] Peripheral not connected');
 			return this.connect().then(() => this.setMotorStop()).catch((error) => {
 				this.log.error('[setMotorStop] failed to set motor stop after trying to reconnect: %s', error);
 			});
