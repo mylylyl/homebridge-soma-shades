@@ -1,16 +1,48 @@
 {
-  "pluginAlias": "SOMAShades",
-  "pluginType": "platform",
-  "singular": true,
-  "schema": {
-    "type": "object",
-    "properties": {
-      "name": {
-        "title": "Name",
-        "type": "string",
-        "required": true,
-        "default": "Example Dynamic Platform"
-      }
-    }
-  }
+	"pluginAlias": "SOMAShades",
+	"pluginType": "platform",
+	"singular": true,
+	"schema": {
+		"type": "object",
+		"properties": {
+			"devices": {
+				"type": "array",
+				"title": "Devices",
+				"items": {
+					"type": "object",
+					"title": "Shades",
+					"properties": {
+						"name": {
+							"type": "string",
+							"title": "Shades Name",
+							"required": true,
+							"placeholder": "e.g. Living Room Shades",
+							"description": "Display Name you want to give this shades accessory in HomeKit. Each shades must have a unique name."
+						},
+						"id": {
+							"type": "string",
+							"title": "Shades MAC Address",
+							"required": true,
+							"placeholder": "e.g. d542c4c9a702",
+							"description": "MAC address of the SOMA Shades you want to connect, without colon. You can find this info in the Smart Shades app."
+						}
+					}
+				}
+			}
+		}
+	},
+	"layout": [
+		{
+			"key": "devices",
+			"type": "array",
+			"name": " ",
+			"description": "Provide the details of your shades.",
+			"orderable": true,
+			"buttonText": "Add Shades",
+			"items": [
+				"devices[].name",
+				"devices[].id"
+			]
+		}
+	]
 }

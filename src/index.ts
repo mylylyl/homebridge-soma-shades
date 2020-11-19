@@ -1,11 +1,11 @@
 import { API } from 'homebridge';
 
 import { PLATFORM_NAME } from './settings';
-import { SOMAShadesPlatform } from './platform'; 
+import { SOMAShadesPlatform } from './platform';
 
 /**
  * This method registers the platform with Homebridge
  */
 export = (api: API) => {
-  api.registerPlatform(PLATFORM_NAME, SOMAShadesPlatform);
+	api.registerPlatform(PLATFORM_NAME, SOMAShadesPlatform);
 };
