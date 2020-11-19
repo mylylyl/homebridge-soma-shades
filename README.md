@@ -38,7 +38,7 @@ or add below to ```config.json``` manually
     "devices": [
         {
             "name": "Balcony Shades",
-            "id": "d542c4c9a705"
+            "id": "CHANGE ME TO YOUR SHADES MAC ADDRESS WITHOUT COLON"
         }
     ],
     "platform": "SOMAShades"
