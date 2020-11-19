@@ -198,12 +198,18 @@ export class SOMADevice {
 	async getCurrentPosition(): Promise<number> {
 		if (!this.connected) {
 			this.log.error('[getCurrentPosition] Peripheral not connected');
-			return this.connect().then(() => this.getCurrentPosition());
+			return this.connect().then(() => this.getCurrentPosition()).catch((error) => {
+				this.log.error('[getCurrentPosition] failed to get position after trying to reconnect: %s', error);
+				return 0;
+			});
 		}
 
 		if (!this.initialized) {
 			this.log.error('[getCurrentPosition] Peripheral characteristics not initialized');
-			return this.getCharacteristics().then(() => this.getCurrentPosition());
+			return this.getCharacteristics().then(() => this.getCurrentPosition()).catch((error) => {
+				this.log.error('[getCurrentPosition] failed to get position after trying to get characteristics: %s', error);
+				return 0;
+			});
 		}
 
 		if (!this.characteristics.motor.state) {
@@ -230,12 +236,18 @@ export class SOMADevice {
 	async getTargetPosition(): Promise<number> {
 		if (!this.connected) {
 			this.log.error('[getTargetPosition] Peripheral not connected');
-			return this.connect().then(() => this.getTargetPosition());
+			return this.connect().then(() => this.getTargetPosition()).catch((error) => {
+				this.log.error('[getTargetPosition] failed to get position after trying to reconnect: %s', error);
+				return 0;
+			});
 		}
 
 		if (!this.initialized) {
 			this.log.error('[getTargetPosition] Peripheral characteristics not initialized');
-			return this.getCharacteristics().then(() => this.getTargetPosition());
+			return this.getCharacteristics().then(() => this.getTargetPosition()).catch((error) => {
+				this.log.error('[getTargetPosition] failed to get position after trying to get characteristics: %s', error);
+				return 0;
+			});
 		}
 
 		if (!this.characteristics.motor.target) {
@@ -251,7 +263,7 @@ export class SOMADevice {
 				this.log.debug('[getTargetPosition] return buf as buffer');
 				return (buf as Buffer)[0];
 			}
-			this.log.debug('[getTargetPosition] return buf as 0');
+			this.log.error('[getTargetPosition] return buf as 0');
 			return 0;
 		}).catch((error) => {
 			this.log.error('[getTargetPosition] error: %s', error);
@@ -262,12 +274,16 @@ export class SOMADevice {
 	async setTargetPosition(position: number): Promise<void> {
 		if (!this.connected) {
 			this.log.error('[setTargetPosition] Peripheral not connected');
-			return this.connect().then(() => this.setTargetPosition(position));
+			return this.connect().then(() => this.setTargetPosition(position)).catch((error) => {
+				this.log.error('[setTargetPosition] failed to set position after trying to reconnect: %s', error);
+			});
 		}
 
 		if (!this.initialized) {
 			this.log.error('[setTargetPosition] Peripheral characteristics not initialized');
-			return this.getCharacteristics().then(() => this.setTargetPosition(position));
+			return this.getCharacteristics().then(() => this.setTargetPosition(position)).catch((error) => {
+				this.log.error('[setTargetPosition] failed to set position after trying to get characteristics: %s', error);
+			});
 		}
 
 		if (!this.characteristics.motor.target) {
@@ -278,20 +294,22 @@ export class SOMADevice {
 		Promise.race([
 			await this.characteristics.motor.target.writeAsync(Buffer.from([position]), false),
 			new Promise((_, reject) => setTimeout(() => reject(new Error('[setTargetPosition] timed out')), DEFAULT_TIMEOUT)),
-		]).then(() => {
-			return;
-		}).catch((error) => this.log.error('[setTargetPosition] error: %s', error));
+		]).catch((error) => this.log.error('[setTargetPosition] error: %s', error));
 	}
 
 	async setMotorStop(): Promise<void> {
 		if (!this.connected) {
 			this.log.error('[setMotorStop] Peripheral not connected');
-			return this.connect().then(() => this.setMotorStop());
+			return this.connect().then(() => this.setMotorStop()).catch((error) => {
+				this.log.error('[setMotorStop] failed to set motor stop after trying to reconnect: %s', error);
+			});
 		}
 
 		if (!this.initialized) {
 			this.log.error('[setMotorStop] Peripheral characteristics not initialized');
-			return this.getCharacteristics().then(() => this.setMotorStop());
+			return this.getCharacteristics().then(() => this.setMotorStop()).catch((error) => {
+				this.log.error('[setMotorStop] failed to set motor stop after trying to get characteristics: %s', error);
+			});
 		}
 
 		if (!this.characteristics.motor.control) {
@@ -303,8 +321,6 @@ export class SOMADevice {
 			await this.characteristics.motor.control.writeAsync(Buffer.from([MOTOR_STOP]), false),
 			new Promise((_, reject) => setTimeout(() => reject(new Error('[setMotorStop] timed out')), DEFAULT_TIMEOUT)),
 		]).catch((error) => this.log.error('[setMotorStop] error: %s', error));
-
-		return;
 	}
 
 	public disconnect(): Promise<void> {
