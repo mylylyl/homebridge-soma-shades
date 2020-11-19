@@ -95,7 +95,7 @@ export class SOMAShadesPlatform implements DynamicPlatformPlugin {
 		noble.startScanningAsync();
 	}
 
-	addAccessory(deviceConfig: { name: string, id: string }, peripharel: noble.Peripheral) {
+	addAccessory(deviceConfig: { name: string; id: string }, peripharel: noble.Peripheral) {
 		const uuid = this.api.hap.uuid.generate(deviceConfig.id);
 
 		const existingAccessory = this.accessories.find(accessory => accessory.UUID === uuid);

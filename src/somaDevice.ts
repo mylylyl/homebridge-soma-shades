@@ -9,16 +9,16 @@ const INFO_HARDWARE_REVISION_CHARACTERISTIC_UUID = '2a27';
 const INFO_FIRMWARE_REVISION_CHARACTERISTIC_UUID = '2a26';
 const INFO_SOFTWARE_REVISION_CHARACTERISTIC_UUID = '2a28';
 // battery
-const BATTERY_SERVICE_UUID = '180f';
-const BATTERY_CHARACTERISTIC_UUID = '2a19';
+//const BATTERY_SERVICE_UUID = '180f';
+//const BATTERY_CHARACTERISTIC_UUID = '2a19';
 // motor control
 const MOTOR_SERVICE_UUID = '00001861b87f490c92cb11ba5ea5167c';
 const MOTOR_STATE_CHARACTERISTIC_UUID = '00001525b87f490c92cb11ba5ea5167c';
 const MOTOR_TARGET_CHARACTERISTIC_UUID = '00001526b87f490c92cb11ba5ea5167c';
 const MOTOR_CONTROL_CHARACTERISTIC_UUID = '00001530b87f490c92cb11ba5ea5167c';
-const MOTOR_MOVE_UP = 0x69;
+//const MOTOR_MOVE_UP = 0x69;
 const MOTOR_STOP = 0x50;
-const MOTOR_MOVE_DOWN = 0x96;
+//const MOTOR_MOVE_DOWN = 0x96;
 // timeout
 const DEFAULT_TIMEOUT = 10000; // 10s
 
@@ -40,8 +40,9 @@ export class SOMADevice {
 			state: noble.Characteristic | null;
 			target: noble.Characteristic | null;
 			control: noble.Characteristic | null;
-		}
+		};
 	};
+
 	private connected = false;
 	private initialized = false;
 
@@ -55,7 +56,7 @@ export class SOMADevice {
 				state: null,
 				target: null,
 				control: null,
-			}
+			},
 		};
 	}
 
@@ -86,7 +87,7 @@ export class SOMADevice {
 
 			this.peripheral.connectAsync().then(() => {
 				this.connected = true;
-				this.log.debug('successfully connect to device')
+				this.log.debug('successfully connect to device');
 				return this.getCharacteristics();
 			}).then(() => {
 				if (this.initialized) {
