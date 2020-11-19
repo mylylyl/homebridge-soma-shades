@@ -26,7 +26,7 @@ See the document of the [@abandonware/noble](https://github.com/abandonware/nobl
 
 ### Install package
 ```sh
-sudo npm install -g @fisherwise/homebridge-soma-shades
+sudo npm install -g homebridge-soma-shades
 ```
 You can also install it on the homebridge plugins page.
 

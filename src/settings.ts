@@ -6,4 +6,4 @@ export const PLATFORM_NAME = 'SOMAShades';
 /**
  * This must match the name of your plugin as defined the package.json
  */
-export const PLUGIN_NAME = '@fisherwise/homebridge-soma-shades';
+export const PLUGIN_NAME = 'homebridge-soma-shades';
