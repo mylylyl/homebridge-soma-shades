@@ -176,7 +176,7 @@ export class SOMADevice {
 
 		this.characteristics.battery = batteryCharacteristics[0];
 
-		const motorCharacteristics = await services[0].discoverCharacteristicsAsync([MOTOR_STATE_CHARACTERISTIC_UUID, MOTOR_TARGET_CHARACTERISTIC_UUID, MOTOR_CONTROL_CHARACTERISTIC_UUID]);
+		const motorCharacteristics = await services[1].discoverCharacteristicsAsync([MOTOR_STATE_CHARACTERISTIC_UUID, MOTOR_TARGET_CHARACTERISTIC_UUID, MOTOR_CONTROL_CHARACTERISTIC_UUID]);
 		if (!motorCharacteristics || motorCharacteristics.length !== 3) {
 			this.log.error('Invalid motor characteristics');
 			return;
