@@ -200,7 +200,7 @@ export class SOMADevice {
 		if (!this.connected) {
 			this.log.info('[getCurrentPosition] Peripheral not connected');
 			return this.connect().then(() => this.getCurrentPosition()).catch((error) => {
-				this.log.error('[getCurrentPosition] failed to get position after trying to reconnect: %s', error);
+				this.log.error('[getCurrentPosition] failed to get after trying to reconnect: %s', error);
 				return 0;
 			});
 		}
@@ -208,13 +208,13 @@ export class SOMADevice {
 		if (!this.initialized) {
 			this.log.error('[getCurrentPosition] Peripheral characteristics not initialized');
 			return this.getCharacteristics().then(() => this.getCurrentPosition()).catch((error) => {
-				this.log.error('[getCurrentPosition] failed to get position after trying to get characteristics: %s', error);
+				this.log.error('[getCurrentPosition] failed to get after trying to get characteristics: %s', error);
 				return 0;
 			});
 		}
 
 		if (!this.characteristics.motor.state) {
-			this.log.error('[getCurrentPosition] Peripheral characteristics.motor.target is invalid');
+			this.log.error('[getCurrentPosition] Peripheral characteristic is invalid');
 			return 0;
 		}
 
@@ -238,7 +238,7 @@ export class SOMADevice {
 		if (!this.connected) {
 			this.log.info('[getTargetPosition] Peripheral not connected');
 			return this.connect().then(() => this.getTargetPosition()).catch((error) => {
-				this.log.error('[getTargetPosition] failed to get position after trying to reconnect: %s', error);
+				this.log.error('[getTargetPosition] failed to get after trying to reconnect: %s', error);
 				return 0;
 			});
 		}
@@ -246,13 +246,13 @@ export class SOMADevice {
 		if (!this.initialized) {
 			this.log.error('[getTargetPosition] Peripheral characteristics not initialized');
 			return this.getCharacteristics().then(() => this.getTargetPosition()).catch((error) => {
-				this.log.error('[getTargetPosition] failed to get position after trying to get characteristics: %s', error);
+				this.log.error('[getTargetPosition] failed to get after trying to get characteristics: %s', error);
 				return 0;
 			});
 		}
 
 		if (!this.characteristics.motor.target) {
-			this.log.error('[getTargetPosition] Peripheral characteristics.motor.target is invalid');
+			this.log.error('[getTargetPosition] Peripheral characteristic is invalid');
 			return 0;
 		}
 
@@ -276,19 +276,19 @@ export class SOMADevice {
 		if (!this.connected) {
 			this.log.info('[setTargetPosition] Peripheral not connected');
 			return this.connect().then(() => this.setTargetPosition(position)).catch((error) => {
-				this.log.error('[setTargetPosition] failed to set position after trying to reconnect: %s', error);
+				this.log.error('[setTargetPosition] failed to set after trying to reconnect: %s', error);
 			});
 		}
 
 		if (!this.initialized) {
 			this.log.error('[setTargetPosition] Peripheral characteristics not initialized');
 			return this.getCharacteristics().then(() => this.setTargetPosition(position)).catch((error) => {
-				this.log.error('[setTargetPosition] failed to set position after trying to get characteristics: %s', error);
+				this.log.error('[setTargetPosition] failed to set after trying to get characteristics: %s', error);
 			});
 		}
 
 		if (!this.characteristics.motor.target) {
-			this.log.error('[setTargetPosition] Peripheral characteristics.motor.target is invalid');
+			this.log.error('[setTargetPosition] Peripheral characteristic is invalid');
 			return;
 		}
 
@@ -302,19 +302,19 @@ export class SOMADevice {
 		if (!this.connected) {
 			this.log.info('[setMotorStop] Peripheral not connected');
 			return this.connect().then(() => this.setMotorStop()).catch((error) => {
-				this.log.error('[setMotorStop] failed to set motor stop after trying to reconnect: %s', error);
+				this.log.error('[setMotorStop] failed to set after trying to reconnect: %s', error);
 			});
 		}
 
 		if (!this.initialized) {
 			this.log.error('[setMotorStop] Peripheral characteristics not initialized');
 			return this.getCharacteristics().then(() => this.setMotorStop()).catch((error) => {
-				this.log.error('[setMotorStop] failed to set motor stop after trying to get characteristics: %s', error);
+				this.log.error('[setMotorStop] failed to set after trying to get characteristics: %s', error);
 			});
 		}
 
 		if (!this.characteristics.motor.control) {
-			this.log.error('[setMotorStop] Peripheral characteristics.motor.target is invalid');
+			this.log.error('[setMotorStop] Peripheral characteristic is invalid');
 			return;
 		}
 
