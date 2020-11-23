@@ -13,6 +13,7 @@ import { SOMADevice } from './somaDevice';
 
 export class ShadesAccessory {
 	private service: Service;
+	private batteryService: Service;
 
 	/**
 	 * The HomeKit uses position as percentage from bottom to top. 0 is bottom(fully closed) and 100 is top(fully open)
@@ -26,6 +27,12 @@ export class ShadesAccessory {
 		targetPosition: 0,
 	};
 
+	private batteryState = {
+		level: 100,
+		charging: 2, // not chargable
+		low_battery: 0, // normal
+	};
+
 	private isSettingPosition = false;
 	private isMoving = false;
 
@@ -34,31 +41,38 @@ export class ShadesAccessory {
 		private readonly accessory: PlatformAccessory,
 		private readonly somaDevice: SOMADevice,
 	) {
-
+		// set up window covering service
 		this.service = this.accessory.getService(this.platform.Service.WindowCovering) || this.accessory.addService(this.platform.Service.WindowCovering);
-
-		// set the service name, this is what is displayed as the default name on the Home app
 		this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name);
-
-		// set our initial states
 		this.service.getCharacteristic(this.platform.api.hap.Characteristic.PositionState).updateValue(this.shadesState.positionState);
 		this.service.getCharacteristic(this.platform.api.hap.Characteristic.CurrentPosition).updateValue(this.shadesState.currentPosition);
 		this.service.getCharacteristic(this.platform.api.hap.Characteristic.TargetPosition).updateValue(this.shadesState.targetPosition);
-
-		// Setup our event listeners.
 		this.service
 			.getCharacteristic(this.platform.api.hap.Characteristic.CurrentPosition)
 			.on(CharacteristicEventTypes.GET, this.getCurrentPosition.bind(this));
-
 		this.service
 			.getCharacteristic(this.platform.api.hap.Characteristic.PositionState)
 			.on(CharacteristicEventTypes.GET, this.getPositionState.bind(this));
-
 		this.service
 			.getCharacteristic(this.platform.api.hap.Characteristic.TargetPosition)
 			.on(CharacteristicEventTypes.GET, this.getTargetPosition.bind(this))
-			// eslint-disable-next-line @typescript-eslint/no-misused-promises
 			.on(CharacteristicEventTypes.SET, this.setTargetPosition.bind(this));
+
+		// setup battery service
+		this.batteryService = this.accessory.getService(this.platform.Service.BatteryService) || this.accessory.addService(this.platform.Service.BatteryService);
+		this.batteryService.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name + ' Battery');
+		this.batteryService.getCharacteristic(this.platform.api.hap.Characteristic.BatteryLevel).updateValue(this.batteryState.level);
+		this.batteryService.getCharacteristic(this.platform.api.hap.Characteristic.ChargingState).updateValue(this.batteryState.charging);
+		this.batteryService.getCharacteristic(this.platform.api.hap.Characteristic.StatusLowBattery).updateValue(this.batteryState.low_battery);
+		this.batteryService
+			.getCharacteristic(this.platform.api.hap.Characteristic.BatteryLevel)
+			.on(CharacteristicEventTypes.GET, this.getBatteryLevel.bind(this));
+		this.batteryService
+			.getCharacteristic(this.platform.api.hap.Characteristic.ChargingState)
+			.on(CharacteristicEventTypes.GET, this.getChargingState.bind(this));
+		this.batteryService
+			.getCharacteristic(this.platform.api.hap.Characteristic.StatusLowBattery)
+			.on(CharacteristicEventTypes.GET, this.getLowBatteryState.bind(this));
 
 		// set accessory information
 		this.somaDevice.getInfomationCharacteristics().then((deviceInformation) => {
@@ -76,22 +90,30 @@ export class ShadesAccessory {
 		}).catch((error) => this.platform.log.error('Failed to get device information: %s', error));
 	}
 
-	// Get the current window covering state.
+	private getBatteryLevel(callback: CharacteristicGetCallback): void {
+		callback(undefined, this.batteryState.level);
+	}
+
+	private getChargingState(callback: CharacteristicGetCallback): void {
+		callback(undefined, this.batteryState.charging);
+	}
+
+	private getLowBatteryState(callback: CharacteristicGetCallback): void {
+		callback(undefined, this.batteryState.low_battery);
+	}
+
 	private getPositionState(callback: CharacteristicGetCallback): void {
 		callback(undefined, this.shadesState.positionState);
 	}
 
-	// Get the current window covering state.
 	private getCurrentPosition(callback: CharacteristicGetCallback): void {
 		callback(undefined, this.shadesState.currentPosition);
 	}
 
-	// Get the target window covering state.
 	private getTargetPosition(callback: CharacteristicGetCallback): void {
 		callback(undefined, this.shadesState.targetPosition);
 	}
 
-	// Set the target window covering state and execute the action.
 	private async setTargetPosition(value: CharacteristicValue, callback: CharacteristicSetCallback): Promise<void> {
 		this.platform.log.debug('setting target position to %d', value as number);
 		this.isSettingPosition = true;
@@ -149,6 +171,15 @@ export class ShadesAccessory {
 		// Loop forever.
 		for (; ;) {
 			this.platform.log.debug('refreshing...');
+
+			this.batteryState.level = await this.somaDevice.getBatteryLevel();
+			this.platform.log.debug('setting battery level to %d', this.batteryState.level);
+			
+			if (this.batteryState.level <= 10) {
+				this.batteryState.low_battery = this.platform.api.hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
+			} else {
+				this.batteryState.low_battery = this.platform.api.hap.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
+			}
 
 			if (this.isSettingPosition) {
 				this.platform.log.debug('is setting position, continue...');

@@ -46,7 +46,8 @@ or add below to ```config.json``` manually
 ```
 
 ## TODO
- - [ ] add a battery accessory for the shades
+ - [x] add a battery accessory for the shades
+ - [ ] correctly read charging state
 
 
 

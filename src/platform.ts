@@ -24,8 +24,7 @@ export class SOMAShadesPlatform implements DynamicPlatformPlugin {
 
 	// this is used to track restored cached accessories
 	public readonly accessories: PlatformAccessory[] = [];
-	private discoveredAllDevices = false;
-
+	
 	constructor(
 		public readonly log: Logger,
 		public readonly config: PlatformConfig,
@@ -55,7 +54,7 @@ export class SOMAShadesPlatform implements DynamicPlatformPlugin {
 		this.accessories.push(accessory);
 	}
 
-	discoverDevices() {
+	async discoverDevices() {
 		// remove unconfigured accessories first
 		if (!this.config || !(this.config as SOMAShadesPlatformConfig).devices || (this.config as SOMAShadesPlatformConfig).devices.length <= 0) {
 			this.log.error('invalid config, removing all accessories');
@@ -86,17 +85,9 @@ export class SOMAShadesPlatform implements DynamicPlatformPlugin {
 
 					if (discoveredDevices.length === (this.config as SOMAShadesPlatformConfig).devices.length) {
 						this.log.debug('discovered all peripherals, exiting...');
-						this.discoveredAllDevices = true;
 						noble.stopScanningAsync();
 					}
 				}
-			}
-		});
-
-		noble.on('scanStop', () => {
-			if (!this.discoveredAllDevices) {
-				this.log.debug('someone stopped noble scanning but we have not finished discovering, restarting discover...');
-				noble.startScanningAsync();
 			}
 		});
 

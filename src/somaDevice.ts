@@ -9,8 +9,8 @@ const INFO_HARDWARE_REVISION_CHARACTERISTIC_UUID = '2a27';
 const INFO_FIRMWARE_REVISION_CHARACTERISTIC_UUID = '2a26';
 const INFO_SOFTWARE_REVISION_CHARACTERISTIC_UUID = '2a28';
 // battery
-//const BATTERY_SERVICE_UUID = '180f';
-//const BATTERY_CHARACTERISTIC_UUID = '2a19';
+const BATTERY_SERVICE_UUID = '180f';
+const BATTERY_LEVEL_CHARACTERISTIC_UUID = '2a19';
 // motor control
 const MOTOR_SERVICE_UUID = '00001861b87f490c92cb11ba5ea5167c';
 const MOTOR_STATE_CHARACTERISTIC_UUID = '00001525b87f490c92cb11ba5ea5167c';
@@ -131,6 +131,7 @@ export class SOMADevice {
 		}
 
 		for (const characteristic of characteristics) {
+			this.log.debug(characteristic.toString());
 			switch (characteristic.uuid) {
 				case INFO_MANUFACTURER_CHARACTERISTIC_UUID:
 					deviceInfo.manufacturer = (await characteristic.readAsync()).toString();
@@ -161,11 +162,19 @@ export class SOMADevice {
 			return;
 		}
 
-		const services = await this.peripheral.discoverServicesAsync([MOTOR_SERVICE_UUID]);
-		if (!services || services.length !== 1 || services[0].uuid !== MOTOR_SERVICE_UUID) {
-			this.log.error('Invalid motor services: %s', services.toString());
+		const services = await this.peripheral.discoverServicesAsync([BATTERY_SERVICE_UUID, MOTOR_SERVICE_UUID]);
+		if (!services || services.length !== 2 || services[0].uuid !== BATTERY_SERVICE_UUID || services[1].uuid !== MOTOR_SERVICE_UUID) {
+			this.log.error('Invalid services: %s', services.toString());
 			return;
 		}
+
+		const batteryCharacteristics = await services[0].discoverCharacteristicsAsync([BATTERY_LEVEL_CHARACTERISTIC_UUID]);
+		if (!batteryCharacteristics || batteryCharacteristics.length !== 1 || batteryCharacteristics[0].uuid !== BATTERY_LEVEL_CHARACTERISTIC_UUID) {
+			this.log.error('Invalid battery characteristics');
+			return;
+		}
+
+		this.characteristics.battery = batteryCharacteristics[0];
 
 		const motorCharacteristics = await services[0].discoverCharacteristicsAsync([MOTOR_STATE_CHARACTERISTIC_UUID, MOTOR_TARGET_CHARACTERISTIC_UUID, MOTOR_CONTROL_CHARACTERISTIC_UUID]);
 		if (!motorCharacteristics || motorCharacteristics.length !== 3) {
@@ -194,6 +203,44 @@ export class SOMADevice {
 
 		this.log.debug('successfully get characteristics');
 		this.initialized = true;
+	}
+
+	async getBatteryLevel(): Promise<number> {
+		if (!this.connected) {
+			this.log.info('[getBatteryLevel] Peripheral not connected');
+			return this.connect().then(() => this.getBatteryLevel()).catch((error) => {
+				this.log.error('[getBatteryLevel] failed to get after trying to reconnect: %s', error);
+				return 0;
+			});
+		}
+
+		if (!this.initialized) {
+			this.log.error('[getBatteryLevel] Peripheral characteristics not initialized');
+			return this.getCharacteristics().then(() => this.getBatteryLevel()).catch((error) => {
+				this.log.error('[getBatteryLevel] failed to get after trying to get characteristics: %s', error);
+				return 0;
+			});
+		}
+
+		if (!this.characteristics.battery) {
+			this.log.error('[getBatteryLevel] Peripheral characteristic is invalid');
+			return 0;
+		}
+
+		return Promise.race([
+			await this.characteristics.battery.readAsync(),
+			new Promise((_, reject) => setTimeout(() => reject(new Error('[getBatteryLevel] timed out')), DEFAULT_TIMEOUT)),
+		]).then((buf) => {
+			if (buf instanceof Buffer) {
+				this.log.debug('[getBatteryLevel] return buf as buffer');
+				return (buf as Buffer)[0];
+			}
+			this.log.error('[getBatteryLevel] return buf as false');
+			return 0;
+		}).catch((error) => {
+			this.log.error('[getBatteryLevel] error: %s', error);
+			return 0;
+		});
 	}
 
 	async getCurrentPosition(): Promise<number> {
