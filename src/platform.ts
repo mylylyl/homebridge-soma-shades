@@ -24,7 +24,7 @@ export class SOMAShadesPlatform implements DynamicPlatformPlugin {
 
 	// this is used to track restored cached accessories
 	public readonly accessories: PlatformAccessory[] = [];
-	
+
 	constructor(
 		public readonly log: Logger,
 		public readonly config: PlatformConfig,
@@ -54,7 +54,7 @@ export class SOMAShadesPlatform implements DynamicPlatformPlugin {
 		this.accessories.push(accessory);
 	}
 
-	async discoverDevices() {
+	discoverDevices() {
 		// remove unconfigured accessories first
 		if (!this.config || !(this.config as SOMAShadesPlatformConfig).devices || (this.config as SOMAShadesPlatformConfig).devices.length <= 0) {
 			this.log.error('invalid config, removing all accessories');
