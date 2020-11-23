@@ -131,7 +131,6 @@ export class SOMADevice {
 		}
 
 		for (const characteristic of characteristics) {
-			this.log.debug(characteristic.toString());
 			switch (characteristic.uuid) {
 				case INFO_MANUFACTURER_CHARACTERISTIC_UUID:
 					deviceInfo.manufacturer = (await characteristic.readAsync()).toString();
