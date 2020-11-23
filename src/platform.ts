@@ -24,13 +24,14 @@ export class SOMAShadesPlatform implements DynamicPlatformPlugin {
 
 	// this is used to track restored cached accessories
 	public readonly accessories: PlatformAccessory[] = [];
+	private discoveredAllDevices = false;
 
 	constructor(
 		public readonly log: Logger,
 		public readonly config: PlatformConfig,
 		public readonly api: API,
 	) {
-		this.log.debug('Finished initializing platform:', this.config.name);
+		this.log.debug('Finished initializing platform');
 
 		// When this event is fired it means Homebridge has restored all cached accessories from disk.
 		// Dynamic Platform plugins should only register new accessories after this event was fired,
@@ -85,9 +86,17 @@ export class SOMAShadesPlatform implements DynamicPlatformPlugin {
 
 					if (discoveredDevices.length === (this.config as SOMAShadesPlatformConfig).devices.length) {
 						this.log.debug('discovered all peripherals, exiting...');
+						this.discoveredAllDevices = true;
 						noble.stopScanningAsync();
 					}
 				}
+			}
+		});
+
+		noble.on('scanStop', () => {
+			if (!this.discoveredAllDevices) {
+				this.log.debug('someone stopped noble scanning but we have not finished discovering, restarting discover...');
+				noble.startScanningAsync();
 			}
 		});
 
