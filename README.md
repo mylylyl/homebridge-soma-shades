@@ -48,6 +48,7 @@ or add below to ```config.json``` manually
 ## TODO
  - [x] add a battery accessory for the shades
  - [ ] correctly read charging state
+ - [ ] set polling rate through config
 
 
 
