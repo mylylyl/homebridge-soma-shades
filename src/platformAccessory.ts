@@ -109,27 +109,27 @@ export class ShadesAccessory {
 	}
 
 	private getBatteryLevel(callback: CharacteristicGetCallback) {
-		callback(undefined, this.batteryState.level);
+		callback(null, this.batteryState.level);
 	}
 
 	private getChargingState(callback: CharacteristicGetCallback) {
-		callback(undefined, this.batteryState.charging);
+		callback(null, this.batteryState.charging);
 	}
 
 	private getLowBatteryState(callback: CharacteristicGetCallback) {
-		callback(undefined, this.batteryState.low_battery);
+		callback(null, this.batteryState.low_battery);
 	}
 
 	private getPositionState(callback: CharacteristicGetCallback) {
-		callback(undefined, this.shadesState.positionState);
+		callback(null, this.shadesState.positionState);
 	}
 
 	private getCurrentPosition(callback: CharacteristicGetCallback) {
-		callback(undefined, this.shadesState.currentPosition);
+		callback(null, this.shadesState.currentPosition);
 	}
 
 	private getTargetPosition(callback: CharacteristicGetCallback) {
-		callback(undefined, this.shadesState.targetPosition);
+		callback(null, this.shadesState.targetPosition);
 	}
 
 	private setTargetPosition(value: CharacteristicValue, callback: CharacteristicSetCallback) {
@@ -163,7 +163,7 @@ export class ShadesAccessory {
 		// since our stored position are reversed we need to reverse them back.
 		this.somaDevice.setTargetPosition(100 - this.shadesState.targetPosition)
 			.then(() => this.platform.log.debug('%s: successfully set target position', this.accessory.displayName))
-			.catch(() => this.platform.log.error('%s: failed to set target position', this.accessory.displayName));
+			.catch((error) => this.platform.log.error('%s: failed to set target position: %s', this.accessory.displayName, error));
 
 		callback(null);
 	}
@@ -190,12 +190,7 @@ export class ShadesAccessory {
 			this.platform.log.debug('currentPosition %d targetPosition %d', this.shadesState.currentPosition, this.shadesState.targetPosition);
 
 			if (this.shadesState.positionState !== POSITION_STATE.STOPPED) {
-				if (!this.doneMoving(this.shadesState.currentPosition, this.shadesState.targetPosition, 2)) {
-					// we want some quick update here
-					this.platform.log.debug('quick update here');
-					await this.sleep(1);
-					continue;
-				} else {
+				if (this.doneMoving(this.shadesState.currentPosition, this.shadesState.targetPosition, 2)) {
 					this.platform.log.debug('done moving, updating state');
 
 					this.shadesState.positionState = POSITION_STATE.STOPPED;
