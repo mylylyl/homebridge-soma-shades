@@ -25,6 +25,19 @@ enum POSITION_STATE {
 	STOPPED = 2,
 }
 
+// dummy replica of HAP.ChargingState
+enum CHARGING_STATE {
+	NOT_CHARGING = 0,
+	CHARGING = 1,
+	NOT_CHARGEABLE = 2
+}
+
+// dummy replica of HAP.LowBattery
+enum LOW_BATTERY {
+	NORMAL = 0,
+	LOW = 1
+}
+
 export class ShadesAccessory {
 	private service: Service;
 	private batteryService: Service;
@@ -42,8 +55,8 @@ export class ShadesAccessory {
 
 	private batteryState = {
 		level: 100,
-		charging: 2, // not chargable
-		low_battery: 0, // normal
+		charging: CHARGING_STATE.NOT_CHARGEABLE,
+		low_battery: LOW_BATTERY.NORMAL,
 	};
 
 	// last time we set target position
@@ -177,9 +190,9 @@ export class ShadesAccessory {
 			this.platform.log.debug('setting battery level to %d', this.batteryState.level);
 			
 			if (this.batteryState.level <= LOW_BATTERY_LEVEL) {
-				this.batteryState.low_battery = this.platform.Characteristic.StatusLowBattery.BATTERY_LEVEL_LOW;
+				this.batteryState.low_battery = LOW_BATTERY.LOW;
 			} else {
-				this.batteryState.low_battery = this.platform.Characteristic.StatusLowBattery.BATTERY_LEVEL_NORMAL;
+				this.batteryState.low_battery = LOW_BATTERY.NORMAL;
 			}
 
 			let currentPosition = await this.somaDevice.getCurrentPosition();
