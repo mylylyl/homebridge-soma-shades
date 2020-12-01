@@ -17,7 +17,7 @@ const MOTOR_STATE_CHARACTERISTIC_UUID = '00001525b87f490c92cb11ba5ea5167c';
 const MOTOR_TARGET_CHARACTERISTIC_UUID = '00001526b87f490c92cb11ba5ea5167c';
 const MOTOR_CONTROL_CHARACTERISTIC_UUID = '00001530b87f490c92cb11ba5ea5167c';
 //const MOTOR_MOVE_UP = 0x69;
-const MOTOR_STOP = 0x50;
+//const MOTOR_STOP = 0x50;
 //const MOTOR_MOVE_DOWN = 0x96;
 // timeout
 const DEFAULT_TIMEOUT = 10000; // 10s
@@ -60,52 +60,67 @@ export class SOMADevice {
 		};
 	}
 
-	public connect(): Promise<void> {
-		return new Promise((resolve, reject) => {
-			// Check the connection state
-			const state = this.peripheral.state;
-			if (state === 'connected') {
-				this.connected = true;
-				resolve();
-				return;
-			} else if (state === 'connecting' || state === 'disconnecting') {
-				reject(new Error('current state is ' + state + '. Wait for a few seconds then try again.'));
-				return;
-			}
+	async initialize(): Promise<void> {
+		if (!this.connected) {
+			return this.connect().then(() => this.initialize());
+		}
 
-			// Set event handlers
-			this.peripheral.once('connect', () => {
-				this.log.debug('peripheral connected');
-				this.connected = true;
-			});
+		if (!this.initialized) {
+			return this.getCharacteristics().then(() => this.initialize());
+		}
 
-			this.peripheral.once('disconnect', () => {
-				this.log.debug('peripheral disconnected');
-				this.connected = false;
-				this.initialized = false;
-				this.peripheral.removeAllListeners();
-			});
+		this.log.debug('finished initialize');
+	}
 
-			this.peripheral.connectAsync().then(() => {
-				this.connected = true;
-				this.log.debug('successfully connect to device');
-				return this.getCharacteristics();
-			}).then(() => {
-				if (this.initialized) {
-					this.log.debug('device characteristics is initialized');
-					resolve();
-				} else {
-					reject(new Error('failed to initialize characteristics'));
-				}
-			}).catch((error) => {
-				reject(error);
-			});
+	private async connect(): Promise<void> {
+		// Check the connection state
+		const state = this.peripheral.state;
+		if (state === 'connected') {
+			this.log.debug('peripheral already connected');
+			this.connected = true;
+			return;
+		} else if (state === 'connecting' || state === 'disconnecting') {
+			this.log.debug('peripheral is connecting or disconnecting. wait a few seconds...');
+			return new Promise(() => setTimeout(() => this.connect(), DEFAULT_TIMEOUT));
+		}
+
+		// Set event handlers
+		this.peripheral.once('connect', () => {
+			this.log.debug('peripheral connected');
+			this.connected = true;
+		});
+
+		this.peripheral.once('disconnect', () => {
+			this.log.debug('peripheral disconnected');
+			this.initialized = false;
+			this.characteristics = {
+				battery: null,
+				motor: {
+					state: null,
+					target: null,
+					control: null,
+				},
+			};
+			this.connected = false;
+			this.peripheral.removeAllListeners();
+		});
+
+		return Promise.race([
+			await this.peripheral.connectAsync(),
+			new Promise((_, reject) => setTimeout(() => reject(new Error('[connect] timed out')), DEFAULT_TIMEOUT)),
+		]).then(() => {
+			this.connected = true;
+			this.log.debug('[connect] connected');
+			return;
+		}).catch((error) => {
+			this.log.error('[connect] error: %s', error);
+			return;
 		});
 	}
 
 	async getInfomationCharacteristics(): Promise<SOMADeviceInformation> {
 		if (!this.connected) {
-			return this.connect().then(() => this.getInfomationCharacteristics());
+			return this.initialize().then(() => this.getInfomationCharacteristics());
 		}
 
 		this.log.debug('getting information characteristics');
@@ -156,6 +171,10 @@ export class SOMADevice {
 	}
 
 	private async getCharacteristics(): Promise<void> {
+		if (!this.connected) {
+			return this.connect().then(() => this.getCharacteristics());
+		}
+
 		if (this.initialized) {
 			this.log.debug('characteristics is inisitalized already');
 			return;
@@ -207,18 +226,12 @@ export class SOMADevice {
 	async getBatteryLevel(): Promise<number> {
 		if (!this.connected) {
 			this.log.info('[getBatteryLevel] Peripheral not connected');
-			return this.connect().then(() => this.getBatteryLevel()).catch((error) => {
-				this.log.error('[getBatteryLevel] failed to get after trying to reconnect: %s', error);
-				return 0;
-			});
+			return this.initialize().then(() => this.getBatteryLevel());
 		}
 
 		if (!this.initialized) {
 			this.log.error('[getBatteryLevel] Peripheral characteristics not initialized');
-			return this.getCharacteristics().then(() => this.getBatteryLevel()).catch((error) => {
-				this.log.error('[getBatteryLevel] failed to get after trying to get characteristics: %s', error);
-				return 0;
-			});
+			return this.getCharacteristics().then(() => this.getBatteryLevel());
 		}
 
 		if (!this.characteristics.battery) {
@@ -245,18 +258,12 @@ export class SOMADevice {
 	async getCurrentPosition(): Promise<number> {
 		if (!this.connected) {
 			this.log.info('[getCurrentPosition] Peripheral not connected');
-			return this.connect().then(() => this.getCurrentPosition()).catch((error) => {
-				this.log.error('[getCurrentPosition] failed to get after trying to reconnect: %s', error);
-				return 0;
-			});
+			return this.initialize().then(() => this.getCurrentPosition());
 		}
 
 		if (!this.initialized) {
 			this.log.error('[getCurrentPosition] Peripheral characteristics not initialized');
-			return this.getCharacteristics().then(() => this.getCurrentPosition()).catch((error) => {
-				this.log.error('[getCurrentPosition] failed to get after trying to get characteristics: %s', error);
-				return 0;
-			});
+			return this.getCharacteristics().then(() => this.getCurrentPosition());
 		}
 
 		if (!this.characteristics.motor.state) {
@@ -283,18 +290,12 @@ export class SOMADevice {
 	async getTargetPosition(): Promise<number> {
 		if (!this.connected) {
 			this.log.info('[getTargetPosition] Peripheral not connected');
-			return this.connect().then(() => this.getTargetPosition()).catch((error) => {
-				this.log.error('[getTargetPosition] failed to get after trying to reconnect: %s', error);
-				return 0;
-			});
+			return this.initialize().then(() => this.getTargetPosition());
 		}
 
 		if (!this.initialized) {
 			this.log.error('[getTargetPosition] Peripheral characteristics not initialized');
-			return this.getCharacteristics().then(() => this.getTargetPosition()).catch((error) => {
-				this.log.error('[getTargetPosition] failed to get after trying to get characteristics: %s', error);
-				return 0;
-			});
+			return this.getCharacteristics().then(() => this.getTargetPosition());
 		}
 
 		if (!this.characteristics.motor.target) {
@@ -321,16 +322,12 @@ export class SOMADevice {
 	async setTargetPosition(position: number): Promise<void> {
 		if (!this.connected) {
 			this.log.info('[setTargetPosition] Peripheral not connected');
-			return this.connect().then(() => this.setTargetPosition(position)).catch((error) => {
-				this.log.error('[setTargetPosition] failed to set after trying to reconnect: %s', error);
-			});
+			return this.initialize().then(() => this.setTargetPosition(position));
 		}
 
 		if (!this.initialized) {
 			this.log.error('[setTargetPosition] Peripheral characteristics not initialized');
-			return this.getCharacteristics().then(() => this.setTargetPosition(position)).catch((error) => {
-				this.log.error('[setTargetPosition] failed to set after trying to get characteristics: %s', error);
-			});
+			return this.getCharacteristics().then(() => this.setTargetPosition(position));
 		}
 
 		if (!this.characteristics.motor.target) {
@@ -342,48 +339,5 @@ export class SOMADevice {
 			await this.characteristics.motor.target.writeAsync(Buffer.from([position]), false),
 			new Promise((_, reject) => setTimeout(() => reject(new Error('[setTargetPosition] timed out')), DEFAULT_TIMEOUT)),
 		]).catch((error) => this.log.error('[setTargetPosition] error: %s', error));
-	}
-
-	async setMotorStop(): Promise<void> {
-		if (!this.connected) {
-			this.log.info('[setMotorStop] Peripheral not connected');
-			return this.connect().then(() => this.setMotorStop()).catch((error) => {
-				this.log.error('[setMotorStop] failed to set after trying to reconnect: %s', error);
-			});
-		}
-
-		if (!this.initialized) {
-			this.log.error('[setMotorStop] Peripheral characteristics not initialized');
-			return this.getCharacteristics().then(() => this.setMotorStop()).catch((error) => {
-				this.log.error('[setMotorStop] failed to set after trying to get characteristics: %s', error);
-			});
-		}
-
-		if (!this.characteristics.motor.control) {
-			this.log.error('[setMotorStop] Peripheral characteristic is invalid');
-			return;
-		}
-
-		Promise.race([
-			await this.characteristics.motor.control.writeAsync(Buffer.from([MOTOR_STOP]), false),
-			new Promise((_, reject) => setTimeout(() => reject(new Error('[setMotorStop] timed out')), DEFAULT_TIMEOUT)),
-		]).catch((error) => this.log.error('[setMotorStop] error: %s', error));
-	}
-
-	public disconnect(): Promise<void> {
-		return new Promise((resolve, reject) => {
-			this.connected = false;
-
-			const state = this.peripheral.state;
-			if (state === 'disconnected') {
-				resolve();
-				return;
-			} else if (state === 'connecting' || state === 'disconnecting') {
-				reject(new Error('Now ' + state + '. Wait for a few seconds then try again.'));
-				return;
-			}
-
-			return this.peripheral.disconnectAsync();
-		});
 	}
 }

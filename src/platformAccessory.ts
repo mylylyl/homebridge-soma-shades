@@ -18,9 +18,6 @@ const LOW_BATTERY_LEVEL = 10;
 // TODO: set through configuration
 const REFRESH_RATE = 10;
 
-// 5 seconds before we can set another target position
-const SET_INTERVAL = 5;
-
 // dummy replica of HAP.PositionState
 enum POSITION_STATE {
 	DECREASING = 0,
@@ -93,19 +90,22 @@ export class ShadesAccessory {
 			.on(CharacteristicEventTypes.GET, this.getLowBatteryState.bind(this));
 
 		// set accessory information
-		this.somaDevice.getInfomationCharacteristics().then((deviceInformation) => {
-			this.platform.log.debug('successfully get device information');
+		this.somaDevice.initialize()
+			.then(() => this.somaDevice.getInfomationCharacteristics())
+			.then((deviceInformation) => {
+				this.platform.log.debug('successfully get device information');
 
-			this.accessory.getService(this.platform.Service.AccessoryInformation)!
-				.setCharacteristic(this.platform.Characteristic.Manufacturer, deviceInformation.manufacturer)
-				.setCharacteristic(this.platform.Characteristic.Model, 'Smart Shades')
-				.setCharacteristic(this.platform.Characteristic.SerialNumber, deviceInformation.serial)
-				.setCharacteristic(this.platform.Characteristic.HardwareRevision, deviceInformation.hardwareRevision)
-				.setCharacteristic(this.platform.Characteristic.SoftwareRevision, deviceInformation.softwareRevision)
-				.setCharacteristic(this.platform.Characteristic.FirmwareRevision, deviceInformation.firmwareRevision);
+				this.accessory.getService(this.platform.Service.AccessoryInformation)!
+					.setCharacteristic(this.platform.Characteristic.Manufacturer, deviceInformation.manufacturer)
+					.setCharacteristic(this.platform.Characteristic.Model, 'Smart Shades')
+					.setCharacteristic(this.platform.Characteristic.SerialNumber, deviceInformation.serial)
+					.setCharacteristic(this.platform.Characteristic.HardwareRevision, deviceInformation.hardwareRevision)
+					.setCharacteristic(this.platform.Characteristic.SoftwareRevision, deviceInformation.softwareRevision)
+					.setCharacteristic(this.platform.Characteristic.FirmwareRevision, deviceInformation.firmwareRevision);
 
-			void this.poll();
-		}).catch((error) => this.platform.log.error('Failed to get device information: %s', error));
+				void this.poll();
+			})
+			.catch((error) => this.platform.log.error('Failed to get device information: %s', error));
 	}
 
 	private getBatteryLevel(callback: CharacteristicGetCallback) {
@@ -141,7 +141,7 @@ export class ShadesAccessory {
 			return;
 		}
 
-		if ((Date.now() - this.lastSetTargetPositionTS) * 1000 < SET_INTERVAL) {
+		if ((Date.now() - this.lastSetTargetPositionTS) * 1000 < REFRESH_RATE) {
 			this.platform.log.debug('failed because we set to often');
 			callback(null);
 			return;
@@ -170,7 +170,7 @@ export class ShadesAccessory {
 
 	private async poll() {
 		// Loop forever.
-		for (; ;) {
+		for (;;) {
 			this.platform.log.debug('refreshing...');
 
 			this.batteryState.level = await this.somaDevice.getBatteryLevel();
