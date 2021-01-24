@@ -60,7 +60,11 @@ export class ShadesAccessory {
 	};
 
 	// last time we set target position
-	private lastSetTargetPositionTS = Date.now();
+	private lastMovementDone = true;
+
+	// we want to setup current & target position from device
+	// but only at the first poll
+	private firstPoll = true;
 
 	constructor(
 		private readonly platform: SOMAShadesPlatform,
@@ -70,7 +74,7 @@ export class ShadesAccessory {
 		// set up window covering service
 		this.service = this.accessory.getService(this.platform.Service.WindowCovering) || this.accessory.addService(this.platform.Service.WindowCovering);
 		this.service.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name);
-		
+
 		this.service.getCharacteristic(this.platform.Characteristic.PositionState).updateValue(this.shadesState.positionState);
 		this.service.getCharacteristic(this.platform.Characteristic.CurrentPosition).updateValue(this.shadesState.currentPosition);
 		this.service.getCharacteristic(this.platform.Characteristic.TargetPosition).updateValue(this.shadesState.targetPosition);
@@ -88,7 +92,7 @@ export class ShadesAccessory {
 		// setup battery service
 		this.batteryService = this.accessory.getService(this.platform.Service.BatteryService) || this.accessory.addService(this.platform.Service.BatteryService);
 		this.batteryService.setCharacteristic(this.platform.Characteristic.Name, accessory.context.device.name + ' Battery');
-		
+
 		this.batteryService.getCharacteristic(this.platform.Characteristic.BatteryLevel).updateValue(this.batteryState.level);
 		this.batteryService.getCharacteristic(this.platform.Characteristic.ChargingState).updateValue(this.batteryState.charging);
 		this.batteryService.getCharacteristic(this.platform.Characteristic.StatusLowBattery).updateValue(this.batteryState.low_battery);
@@ -103,10 +107,9 @@ export class ShadesAccessory {
 			.on(CharacteristicEventTypes.GET, this.getLowBatteryState.bind(this));
 
 		// set accessory information
-		this.somaDevice.initialize()
-			.then(() => this.somaDevice.getInfomationCharacteristics())
+		this.somaDevice.getInfomationCharacteristics()
 			.then((deviceInformation) => {
-				this.platform.log.debug('successfully get device information');
+				this.platform.log.debug(`accessory ${this.accessory.displayName} successfully gets device information`);
 
 				this.accessory.getService(this.platform.Service.AccessoryInformation)!
 					.setCharacteristic(this.platform.Characteristic.Manufacturer, deviceInformation.manufacturer)
@@ -118,7 +121,7 @@ export class ShadesAccessory {
 
 				void this.poll();
 			})
-			.catch((error) => this.platform.log.error('Failed to get device information: %s', error));
+			.catch((error) => this.platform.log.error(`accessory ${this.accessory.displayName} failed to get device information: ${error}`));
 	}
 
 	private getBatteryLevel(callback: CharacteristicGetCallback) {
@@ -146,22 +149,19 @@ export class ShadesAccessory {
 	}
 
 	private setTargetPosition(value: CharacteristicValue, callback: CharacteristicSetCallback) {
-		this.platform.log.debug('try setting target position to %d', value as number);
-
 		if ((value as number) === this.shadesState.currentPosition) {
-			this.platform.log.debug('failed because we are where we want');
+			this.platform.log.debug(`${this.accessory.displayName} failed to set position because shade is at ${value as number} already`);
 			callback(null);
 			return;
 		}
 
-		if ((Date.now() - this.lastSetTargetPositionTS) * 1000 < REFRESH_RATE) {
-			this.platform.log.debug('failed because we set to often');
+		if (!this.lastMovementDone) {
+			this.platform.log.debug(`${this.accessory.displayName} failed to set position because shade is still moving`);
 			callback(null);
 			return;
 		}
 
 		// update our vars
-		this.lastSetTargetPositionTS = Date.now();
 		this.shadesState.targetPosition = value as number;
 
 		// figure out our moving dynamics.
@@ -170,46 +170,90 @@ export class ShadesAccessory {
 
 		// tell HomeKit we're on the move.
 		this.service.getCharacteristic(this.platform.Characteristic.PositionState).updateValue(this.shadesState.positionState);
-		this.platform.log.debug('%s: moving %s to %d', this.accessory.displayName, moveUp ? 'up' : 'down', this.shadesState.targetPosition);
 
-		// move to target
-		// since our stored position are reversed we need to reverse them back.
-		this.somaDevice.setTargetPosition(100 - this.shadesState.targetPosition)
-			.then(() => this.platform.log.debug('%s: successfully set target position', this.accessory.displayName))
-			.catch((error) => this.platform.log.error('%s: failed to set target position: %s', this.accessory.displayName, error));
+		this.platform.log.info(`moving ${this.accessory.displayName} ${moveUp ? 'up' : 'down'} to ${this.shadesState.targetPosition}`);
 
-		callback(null);
+		// move to target, but first check target position on device
+		// since our stored position are reversed we need to reverse them back
+		this.somaDevice.getTargetPosition()
+			.then((targetPosition) => {
+				if (targetPosition !== (100 - this.shadesState.targetPosition)) {
+					return this.somaDevice.setTargetPosition(100 - this.shadesState.targetPosition);
+				}
+			})
+			.then(() => {
+				this.platform.log.debug(`${this.accessory.displayName} successfully set target position ${this.shadesState.targetPosition}`);
+				callback(null);
+			})
+			.catch((error) => {
+				this.platform.log.error(`${this.accessory.displayName} failed to set target position: ${error}`);
+				callback(new Error(error));
+			});
 	}
 
 	private async poll() {
 		// Loop forever.
-		for (;;) {
-			this.platform.log.debug('refreshing...');
+		for (; ;) {
+			this.platform.log.debug(`${this.accessory.displayName} started polling`);
 
-			this.batteryState.level = await this.somaDevice.getBatteryLevel();
-			this.platform.log.debug('setting battery level to %d', this.batteryState.level);
-			
+			const initialized = await this.somaDevice.initialize().catch((error) => {
+				this.platform.log.error(`${this.accessory.displayName} failed to initialize: ${error}`);
+				return false;
+			});
+			if (!initialized) {
+				await this.sleep(REFRESH_RATE);
+				continue;
+			}
+
+			this.batteryState.level = await this.somaDevice.getBatteryLevel().catch((error) => {
+				this.platform.log.error(`${this.accessory.displayName} failed to get battery level: ${error}`);
+				return 0;
+			});
+			this.platform.log.debug(`setting ${this.accessory.displayName} battery level to ${this.batteryState.level}`);
+			this.batteryService.getCharacteristic(this.platform.Characteristic.BatteryLevel).updateValue(this.batteryState.level);
+		
+
 			if (this.batteryState.level <= LOW_BATTERY_LEVEL) {
 				this.batteryState.low_battery = LOW_BATTERY.LOW;
 			} else {
 				this.batteryState.low_battery = LOW_BATTERY.NORMAL;
 			}
+			this.batteryService.getCharacteristic(this.platform.Characteristic.StatusLowBattery).updateValue(this.batteryState.low_battery);
 
-			let currentPosition = await this.somaDevice.getCurrentPosition();
-			currentPosition = 100 - currentPosition;
-			this.shadesState.currentPosition = currentPosition;
+			this.shadesState.currentPosition = 100 - (await this.somaDevice.getCurrentPosition().catch((error) => {
+				this.platform.log.error(`${this.accessory.displayName} failed to get current position: ${error}`);
+				return 100;
+			}));
+			this.platform.log.debug(`updating ${this.accessory.displayName} current position to ${this.shadesState.currentPosition}`);
 			this.service.getCharacteristic(this.platform.Characteristic.CurrentPosition).updateValue(this.shadesState.currentPosition);
 
-			this.platform.log.debug('currentPosition %d targetPosition %d', this.shadesState.currentPosition, this.shadesState.targetPosition);
+			const targetPosition = 100 - (await this.somaDevice.getTargetPosition().catch((error) => {
+				this.platform.log.error(`${this.accessory.displayName} failed to get target position: ${error}`);
+				return 100;
+			}));
+
+			if (this.firstPoll) {
+				this.shadesState.targetPosition = targetPosition;
+				this.platform.log.debug(`updating ${this.accessory.displayName} target position to ${this.shadesState.targetPosition}`);
+				this.service.getCharacteristic(this.platform.Characteristic.TargetPosition).updateValue(this.shadesState.targetPosition);
+				this.firstPoll = false;
+			}
+
+			// eslint-disable-next-line max-len
+			this.platform.log.debug(`${this.accessory.displayName} currentPosition ${this.shadesState.currentPosition} targetPosition ${this.shadesState.targetPosition} deviceTargetPosition ${targetPosition}`);
 
 			if (this.shadesState.positionState !== POSITION_STATE.STOPPED) {
-				if (this.doneMoving(this.shadesState.currentPosition, this.shadesState.targetPosition, 2)) {
-					this.platform.log.debug('done moving, updating state');
+				this.platform.log.debug(`${this.accessory.displayName} is moving`);
 
+				if (this.doneMoving(this.shadesState.currentPosition, this.shadesState.targetPosition, 2)) {
+					this.platform.log.info(`${this.accessory.displayName} done moving, updating state`);
+					this.lastMovementDone = true;
 					this.shadesState.positionState = POSITION_STATE.STOPPED;
 					this.service.getCharacteristic(this.platform.Characteristic.PositionState).updateValue(this.shadesState.positionState);
 				}
 			}
+
+			this.platform.log.debug(`${this.accessory.displayName} done polling`);
 
 			// Sleep until our next update.
 			await this.sleep(REFRESH_RATE);

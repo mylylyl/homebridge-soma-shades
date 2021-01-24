@@ -1,7 +1,7 @@
 {
 	"displayName": "Homebridge SOMA Shades",
 	"name": "homebridge-soma-shades",
-	"version": "1.1.8",
+	"version": "1.2.0",
 	"description": "A homebridge plugin for SOMA Smart Shades",
 	"license": "MIT",
 	"repository": {
@@ -29,7 +29,7 @@
 		"SOMA",
 		"SOMA Smart Shades",
 		"Smart Shades",
-		"Shades",
+		"Shade",
 		"Blind"
 	],
 	"dependencies": {

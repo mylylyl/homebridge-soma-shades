@@ -51,5 +51,10 @@ or add below to ```config.json``` manually
  - [ ] set polling rate through config
 
 
+## Known Issue
+### TypeError: Cannot set property 'mtu' of undefined
+See abandonware/noble#164
+
+
 
 

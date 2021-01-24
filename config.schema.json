@@ -5,6 +5,13 @@
 	"schema": {
 		"type": "object",
 		"properties": {
+			"discoverDelay": {
+				"type": "integer",
+				"default": 15,
+				"title": "Device Discovery Delay (seconds)",
+				"required": true,
+				"description": "Delay discovery of BLE devices, if you have other plugins that uses BLE and noble for communication"
+			},
 			"devices": {
 				"type": "array",
 				"title": "Devices",
@@ -32,6 +39,13 @@
 		}
 	},
 	"layout": [
+		{
+			"type": "flex",
+			"flex-flow": "row wrap",
+			"items": [
+				"discoverDelay"
+			]
+		},
 		{
 			"key": "devices",
 			"type": "array",
